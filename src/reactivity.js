@@ -21,23 +21,32 @@ class Dep {
   }
 }
 
+let deps = new Map();
 Object.keys(data).forEach((key) => {
-  let internalValue = data[key];
+  deps.set(key, new Dep());
+});
 
-  const dep = new Dep();
+let data_without_proxy = data;
+data = new Proxy(data_without_proxy, {
+  get(obj, key) {
+    console.log("Running GETTER", key);
 
-  Object.defineProperty(data, key, {
-    get() {
-      console.log(`Getting ${key.toUpperCase()}`, internalValue);
-      dep.depend();
-      return internalValue;
-    },
-    set(newVal) {
-      console.log(`Setting ${key.toUpperCase()} to`, newVal);
-      internalValue = newVal;
-      dep.notify();
-    },
-  });
+    deps.get(key).depend();
+
+    console.log("Stopping GETTER", key);
+
+    return obj[key];
+  },
+  set(obj, key, newVal) {
+    console.log("Running SETTER", key, newVal);
+
+    obj[key] = newVal;
+    deps.get(key).notify();
+
+    console.log("Stopping SETTER", key, newVal);
+
+    return true;
+  },
 });
 
 function watcher(myFunc) {
@@ -48,12 +57,14 @@ function watcher(myFunc) {
   console.log("Stopping WATCHER");
 }
 
+deps.set("discount", new Dep());
+data["discount"] = 5;
+let salePrice = 0;
+
 watcher(() => {
-  data.total = data.price * data.quantity;
+  salePrice = data.price - data.discount;
 });
 
-console.log("1.", data.total);
-data.price = 20;
-console.log("2.", data.total);
-data.quantity = 5;
-console.log("3.", data.total);
+console.log("1. Sale Price: ", salePrice);
+data.discount = 4.5;
+console.log("2 . Sale Price: ", salePrice);
